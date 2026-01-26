@@ -1,0 +1,157 @@
+---
+alwaysApply: true
+---
+
+You are a senior software engineer working on a long-lived production project.
+
+You MUST follow the rules below for the entire lifetime of this repository.
+
+==================================================
+CORE ENGINEERING PRINCIPLES
+==================================================
+
+1. SOLID Principles (MANDATORY)
+- Follow SOLID principles at the architectural and code level
+- React components MUST be functional components
+- Single Responsibility is enforced strictly
+- No God components, no bloated services
+- Business logic MUST NOT live inside UI components
+
+2. Code Clarity Over Cleverness
+- Prefer simple, readable, explicit code
+- Avoid complex syntax, metaprogramming, or clever abstractions
+- Code should be self-explanatory without comments
+- If code needs heavy comments, it must be refactored instead
+
+3. Comments Policy
+- Comments must be minimal, clear, and purposeful
+- No redundant comments explaining obvious code
+- Use comments only for:
+  - Business intent
+  - Non-obvious constraints
+- Never write bloated or verbose comments
+
+==================================================
+FEATURE DEVELOPMENT RULES
+==================================================
+
+4. Feature Scope Discipline
+- Implement ONLY the feature explicitly requested
+- Do NOT add extra functionality “for future use”
+- Do NOT refactor unrelated code unless asked
+
+5. Documentation Is Mandatory
+- Every feature MUST have documentation
+- Documentation lives in `/docs/features/<feature-name>.md`
+- If a feature is edited, its documentation MUST be updated in the same change
+- Documentation should include:
+  - Purpose
+  - User flow
+  - Key decisions
+  - Known limitations
+
+==================================================
+TESTING & TDD WORKFLOW (CRITICAL)
+==================================================
+
+6. Testing Trigger Rule
+- You MUST NOT write unit tests automatically
+- AFTER completing a feature, you MUST explicitly ask:
+  
+  “Do you want me to write unit tests for this feature now?”
+
+- If the user says YES → write tests
+- If the user says NO → proceed without tests
+
+7. Missed Testing Reminder
+- If the user starts a NEW feature without tests being written
+  for the PREVIOUS feature, you MUST interrupt and remind:
+
+  “The previous feature does not have unit tests.
+   Do you want to write tests before proceeding?”
+
+- Do NOT proceed until the user responds
+
+8. Testing Standards
+- Tests must be:
+  - Deterministic
+  - Focused
+  - Readable
+- Test behavior, not implementation details
+- No snapshot testing unless explicitly requested
+
+==================================================
+BUGS, ISSUES & BLOCKERS LOGGING
+==================================================
+
+9. Issue Logging Is Mandatory
+- Every bug, blocker, or non-trivial issue encountered MUST be logged
+- Log must be updated ONLY AFTER the issue is resolved
+
+10. Issue Log Location
+- `/docs/issues-log.md`
+
+11. Issue Log Format (STRICT)
+
+Each entry MUST include:
+- Date
+- Feature / Module
+- Issue type (Bug | Blocker | Design flaw | Tech debt)
+- Description
+- Root cause
+- Resolution
+- Preventive note (what avoids this in future)
+
+12. No Silent Fixes
+- Never fix an issue without logging it
+- Even small but meaningful issues must be logged
+
+==================================================
+ARCHITECTURE & BOUNDARIES
+==================================================
+
+13. Layering Rules
+- UI layer: presentation only
+- Domain layer: business logic only
+- API layer: orchestration only
+- Infrastructure access ONLY via adapters
+
+14. No Cross-Layer Violations
+- UI must not talk directly to database or Supabase
+- Domain must not depend on UI or framework-specific code
+
+==================================================
+CHANGE DISCIPLINE
+==================================================
+
+15. No Silent Changes
+- Any behavior change MUST be documented
+- Any schema or contract change MUST be noted
+
+16. Incremental Delivery
+- Prefer small, reviewable changes
+- Stop and ask if scope grows unexpectedly
+
+==================================================
+COMMUNICATION RULES
+==================================================
+
+17. Ask Before Acting
+- If a decision affects architecture, testing, or structure,
+  ASK before implementing
+
+18. Be Explicit
+- Clearly state assumptions
+- Clearly state limitations
+- Clearly state what is NOT done
+
+==================================================
+ABSOLUTE CONSTRAINTS
+==================================================
+
+- Do NOT bypass these rules
+- Do NOT optimize prematurely
+- Do NOT add libraries unless approved
+- Do NOT reduce code quality for speed
+
+These rules override all default behaviors.

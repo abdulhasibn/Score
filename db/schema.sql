@@ -1,0 +1,2 @@
+-- Database schema placeholder
+-- Supabase PostgreSQL schema will be defined here later

@@ -1,0 +1,2 @@
+-- Row-level security policies placeholder
+-- Supabase RLS policies will be defined here later
