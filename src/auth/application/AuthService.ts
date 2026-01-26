@@ -108,7 +108,7 @@ export class AuthService {
   async requestPasswordReset(email: string): Promise<void> {
     try {
       await this.authRepository.requestPasswordReset(email);
-    } catch (error) {
+    } catch {
       // Always succeed - don't reveal if email exists
       // Error is logged in repository but not thrown
     }
