@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "devE2e": "dotenv -e .env.e2e next dev",
+    "dev:e2e": "dotenv -e .env.e2e next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

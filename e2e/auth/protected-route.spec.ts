@@ -1,24 +1,31 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
 /**
- * Protected Route Enforcement Test
- * 
- * Proves: Unauthenticated users are redirected to login when accessing protected routes.
- * Validates: Route protection middleware and redirect behavior.
+ * Unauthenticated Home Page Test
+ *
+ * Proves: Unauthenticated users can access the home page and see a Sign In button.
+ * Validates: Home page displays correctly for unauthenticated users with clear CTA.
  */
-test.describe('Protected Route Enforcement', () => {
-  test('should redirect unauthenticated users to login', async ({ page }) => {
+test.describe("Unauthenticated Home Page", () => {
+  test("should show Sign In button for unauthenticated users", async ({
+    page,
+  }) => {
     // Arrange - Start with no session (fresh browser context)
 
-    // Act - Navigate to protected route
-    await page.goto('/');
+    // Act - Navigate to home page
+    await page.goto("/");
 
-    // Assert - Redirected to login page
-    await expect(page).toHaveURL('/login');
+    // Assert - URL remains on home page (no redirect)
+    await expect(page).toHaveURL("/");
 
-    // Assert - Login form is visible (assert on inputs to avoid strict-mode ambiguity)
-    await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
-    await expect(page.getByLabel('Email')).toBeVisible();
-    await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible();
+    // Assert - Home page heading is visible
+    await expect(page.getByRole("heading", { name: "Score" })).toBeVisible();
+
+    // Assert - Sign In button is visible
+    await expect(page.getByRole("button", { name: "Sign In" })).toBeVisible();
+
+    // Assert - Clicking Sign In button navigates to login page
+    await page.getByRole("button", { name: "Sign In" }).click();
+    await expect(page).toHaveURL("/login");
   });
 });

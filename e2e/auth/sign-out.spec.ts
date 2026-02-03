@@ -1,13 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
 /**
  * Sign-Out Test
- * 
+ *
  * Proves: Authenticated users can sign out and are redirected to login.
  * Validates: Session termination and post-logout redirect behavior.
  */
-test.describe('Sign Out', () => {
-  test('should sign out successfully and redirect to login', async ({ page }) => {
+test.describe("Sign Out", () => {
+  test("should sign out successfully and redirect to login", async ({
+    page,
+  }) => {
     // Arrange
     const email = process.env.E2E_TEST_EMAIL;
     const password = process.env.E2E_TEST_PASSWORD;
@@ -18,26 +20,28 @@ test.describe('Sign Out', () => {
     }
 
     // Sign in first
-    await page.goto('/login');
-    await page.getByLabel('Email').fill(email);
-    await page.getByRole('textbox', { name: 'Password' }).fill(password);
-    await page.getByRole('button', { name: 'Sign In' }).click();
-    
-    // Wait for dashboard to load
-    await expect(page).toHaveURL('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await page.goto("/login");
+    await page.getByLabel("Email").fill(email);
+    await page.getByRole("textbox", { name: "Password" }).fill(password);
+    await page.getByRole("button", { name: "Sign In" }).click();
+
+    // Wait for home page to load (authenticated state)
+    await expect(page).toHaveURL("/");
+    await expect(page.getByRole("heading", { name: "Score" })).toBeVisible();
+    await expect(page.getByText(`Signed in as: ${email}`)).toBeVisible();
 
     // Act - Sign out
-    await page.getByRole('button', { name: 'Sign out' }).click();
+    await page.getByRole("button", { name: "Sign Out" }).click();
 
     // Assert - Redirected to login page
-    await expect(page).toHaveURL('/login');
+    await expect(page).toHaveURL("/login");
 
     // Assert - Login form is visible
-    await expect(page.getByRole('heading', { name: 'Sign In' })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sign In" })).toBeVisible();
 
-    // Assert - Session is terminated (cannot access protected route)
-    await page.goto('/');
-    await expect(page).toHaveURL('/login');
+    // Assert - Session is terminated (home page shows Sign In button)
+    await page.goto("/");
+    await expect(page).toHaveURL("/");
+    await expect(page.getByRole("button", { name: "Sign In" })).toBeVisible();
   });
 });

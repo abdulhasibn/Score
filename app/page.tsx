@@ -31,7 +31,7 @@ export default function HomePage() {
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
       <h1 className="text-4xl font-bold">Score</h1>
       <p className="mt-4 text-gray-600">Repository initialized and ready.</p>
-      
+
       {/* Only render auth-dependent content after hydration to prevent hydration mismatches */}
       {mounted && (
         <>
@@ -42,26 +42,23 @@ export default function HomePage() {
               </p>
             </div>
           )}
-          
+
           {status === "authenticated" && user && (
             <div className="mt-8 flex flex-col items-center gap-4">
               <p className="text-sm text-[hsl(var(--muted-foreground))]">
                 Signed in as: {user.email}
               </p>
-              <Button
-                variant="destructive"
-                onClick={handleSignOut}
-              >
+              <Button variant="destructive" onClick={handleSignOut}>
                 Sign Out
               </Button>
             </div>
           )}
-          
+
           {status === "unauthenticated" && (
-            <div className="mt-4">
-              <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                Not signed in
-              </p>
+            <div className="mt-8">
+              <Button variant="success" onClick={() => router.push("/login")}>
+                Sign In
+              </Button>
             </div>
           )}
         </>

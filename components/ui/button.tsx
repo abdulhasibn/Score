@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  * - Min height: 2.5rem (40px) (Section 4.2.1)
  * - Icon spacing: gap-2 (Section 4.2.1)
  * - Border radius: subtle (4-8px max) (Section 4.3)
- * - Variants: primary, secondary, destructive, ghost, outline, link (Section 5.1)
+ * - Variants: primary, secondary, destructive, success, ghost, outline, link (Section 5.1)
  *
  * Uses CSS variables from app/globals.css via Tailwind arbitrary values.
  * Primitives own all styling decisions; consumers choose variants only.
@@ -28,6 +28,8 @@ const buttonVariants = cva(
           "bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] shadow-sm hover:bg-[hsl(var(--secondary))]/80 focus-visible:ring-[hsl(var(--ring))]",
         destructive:
           "bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] shadow-sm hover:bg-[hsl(var(--destructive))]/90 focus-visible:ring-[hsl(var(--ring))]",
+        success:
+          "bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] shadow-sm hover:bg-[hsl(var(--success))]/90 focus-visible:ring-[hsl(var(--ring))]",
         outline:
           "border border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-sm hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] focus-visible:ring-[hsl(var(--ring))]",
         ghost:
@@ -54,7 +56,8 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
