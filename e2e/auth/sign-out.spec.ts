@@ -37,7 +37,7 @@ test.describe("Sign Out", () => {
     await expect(page).toHaveURL("/login");
 
     // Assert - Login form is visible
-    await expect(page.getByRole("heading", { name: "Sign In" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign In" })).toBeVisible();
 
     // Assert - Session is terminated (home page shows Sign In button)
     await page.goto("/");

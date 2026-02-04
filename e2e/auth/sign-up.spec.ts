@@ -79,7 +79,7 @@ test.describe("Sign Up - Option A: Unconfirmed User Flow", () => {
     await expect(page).toHaveURL("/signup");
 
     // Assert - Signup form is visible
-    await expect(page.getByRole("heading", { name: "Sign Up" })).toBeVisible({
+    await expect(page.getByRole("button", { name: "Sign Up" })).toBeVisible({
       timeout: 10000,
     });
 
@@ -91,12 +91,12 @@ test.describe("Sign Up - Option A: Unconfirmed User Flow", () => {
     // Submit form
     await page.getByRole("button", { name: "Sign Up" }).click();
 
-    // Assert - Success toast appears
+    // Assert - Success toast appears (toasts auto-dismiss after 4s, so check quickly)
     await expect(
       page.getByText(
         "Account created. Please check your email to confirm your registration."
       )
-    ).toBeVisible({ timeout: 10000 });
+    ).toBeVisible({ timeout: 3000 });
 
     // Act - Attempt to sign in with unconfirmed account
     await page.goto("/login");
@@ -104,10 +104,10 @@ test.describe("Sign Up - Option A: Unconfirmed User Flow", () => {
     await page.getByRole("textbox", { name: "Password" }).fill(password);
     await page.getByRole("button", { name: "Sign In" }).click();
 
-    // Assert - Error toast appears (email not confirmed)
+    // Assert - Error toast appears (toasts auto-dismiss after 4s, so check quickly)
     await expect(
-      page.getByText("Please confirm your email before signing in.")
-    ).toBeVisible({ timeout: 10000 });
+      page.getByText("Sign in failed: Email not confirmed")
+    ).toBeVisible({ timeout: 3000 });
 
     // Assert - Still on login page (not authenticated)
     await expect(page).toHaveURL("/login");
@@ -133,7 +133,7 @@ test.describe("Sign Up - Option B: Auto-Confirmed User Flow", () => {
 
     // Wait for page to load
     await expect(page).toHaveURL("/signup");
-    await expect(page.getByRole("heading", { name: "Sign Up" })).toBeVisible({
+    await expect(page.getByRole("button", { name: "Sign Up" })).toBeVisible({
       timeout: 10000,
     });
 
@@ -145,12 +145,12 @@ test.describe("Sign Up - Option B: Auto-Confirmed User Flow", () => {
     // Submit form
     await page.getByRole("button", { name: "Sign Up" }).click();
 
-    // Wait for signup to complete
+    // Wait for signup to complete (toasts auto-dismiss after 4s, so check quickly)
     await expect(
       page.getByText(
         "Account created. Please check your email to confirm your registration."
       )
-    ).toBeVisible({ timeout: 10000 });
+    ).toBeVisible({ timeout: 3000 });
 
     // Act - Auto-confirm user via Admin API
     await confirmUserEmail(email);

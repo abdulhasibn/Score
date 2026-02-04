@@ -6,6 +6,11 @@
 # testing
 /coverage
 
+# Playwright
+/playwright-report/
+/test-results/
+/playwright/.cache/
+
 # next.js
 /.next/
 /out/
