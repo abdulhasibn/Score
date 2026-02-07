@@ -41,7 +41,10 @@ const signUpSchema = z
       .regex(/[A-Z]/, "Password must include at least one uppercase letter")
       .regex(/[a-z]/, "Password must include at least one lowercase letter")
       .regex(/[0-9]/, "Password must include at least one number")
-      .regex(/[^A-Za-z0-9]/, "Password must include at least one special character"),
+      .regex(
+        /[^A-Za-z0-9]/,
+        "Password must include at least one special character"
+      ),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -69,9 +72,14 @@ export function SignUpForm() {
 
   const passwordValue = watch("password") || "";
   const confirmPasswordValue = watch("confirmPassword") || "";
-  const passwordsMatch = passwordValue && confirmPasswordValue && passwordValue === confirmPasswordValue;
+  const passwordsMatch =
+    passwordValue &&
+    confirmPasswordValue &&
+    passwordValue === confirmPasswordValue;
 
-  const calculatePasswordStrength = (password: string): {
+  const calculatePasswordStrength = (
+    password: string
+  ): {
     score: number;
     level: "very-weak" | "weak" | "good" | "strong";
     label: string;
@@ -105,7 +113,14 @@ export function SignUpForm() {
   };
 
   const strength = calculatePasswordStrength(passwordValue);
-  const activeBars = strength.level === "very-weak" ? 1 : strength.level === "weak" ? 2 : strength.level === "good" ? 3 : 4;
+  const activeBars =
+    strength.level === "very-weak"
+      ? 1
+      : strength.level === "weak"
+        ? 2
+        : strength.level === "good"
+          ? 3
+          : 4;
 
   const onSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);
@@ -113,11 +128,44 @@ export function SignUpForm() {
     try {
       // Step 1: Always call signUp first
       await signUp(data.email, data.password);
-    } catch {
-      // If signUp throws, show error and abort
-      toast.error("Unable to create account. Please try again.");
-      setIsLoading(false);
-      return;
+    } catch (signUpErr) {
+      // If signUp throws, check error code for specific handling
+      const error = signUpErr as Error & { code?: string };
+      const errorCode = error.code;
+
+      if (errorCode === "user_already_exists") {
+        // User already exists - attempt to sign them in instead
+        toast.info("User exists, signing you in…");
+
+        try {
+          await signIn(data.email, data.password);
+          // Sign in succeeded - redirect to home
+          toast.success("Signed in successfully");
+          router.replace("/");
+        } catch (signInErr) {
+          // Sign in failed - handle based on error code
+          const signInError = signInErr as Error & { code?: string };
+          const signInErrorCode = signInError.code;
+
+          if (signInErrorCode === "invalid_login_credentials") {
+            toast.error("Incorrect password. Please try again.");
+            router.replace("/login");
+          } else if (signInErrorCode === "email_not_confirmed") {
+            toast.error("Please confirm your email before signing in.");
+            router.replace("/login");
+          } else {
+            toast.error("Unable to sign in. Please try again.");
+            router.replace("/login");
+          }
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      } else {
+        toast.error("Unable to create account. Please try again.");
+        setIsLoading(false);
+        return;
+      }
     }
 
     // Step 2: Immediately attempt signIn (signUp succeeded)
@@ -136,10 +184,14 @@ export function SignUpForm() {
         toast.error("Please confirm your email before signing in.");
       } else if (errorCode === "invalid_login_credentials") {
         // C) signIn FAILS with invalid_login_credentials - brand new registration OR confirmation pending
-        toast.success("Account created. Please check your email to confirm your registration.");
+        toast.success(
+          "Account created. Please check your email to confirm your registration."
+        );
       } else {
         // Fallback for unexpected errors
-        toast.success("Account created. Please check your email to confirm your registration.");
+        toast.success(
+          "Account created. Please check your email to confirm your registration."
+        );
       }
     } finally {
       setIsLoading(false);
@@ -149,9 +201,7 @@ export function SignUpForm() {
   const onError = (errors: FieldErrors<SignUpFormData>) => {
     // Extract first validation error and show as toast
     const firstError =
-      errors.email ||
-      errors.password ||
-      errors.confirmPassword;
+      errors.email || errors.password || errors.confirmPassword;
 
     if (firstError?.message) {
       toast.error(firstError.message);
@@ -171,7 +221,11 @@ export function SignUpForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleFormSubmit(onSubmit, onError)} className="space-y-4" noValidate>
+        <form
+          onSubmit={handleFormSubmit(onSubmit, onError)}
+          className="space-y-4"
+          noValidate
+        >
           <div>
             <Label htmlFor="email" className="mb-2">
               Email
@@ -208,7 +262,7 @@ export function SignUpForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))] rounded px-1 py-0.5"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-1 py-0.5 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 tabIndex={0}
               >
@@ -224,21 +278,23 @@ export function SignUpForm() {
               id="password-rules"
               className="mt-1.5 text-sm text-[hsl(var(--muted-foreground))]"
             >
-              Must be at least 8 characters with uppercase, lowercase, number, and special character.
+              Must be at least 8 characters with uppercase, lowercase, number,
+              and special character.
             </p>
             {passwordValue && (
               <div className="mt-2">
-                <div className="flex gap-1 mb-1.5">
+                <div className="mb-1.5 flex gap-1">
                   {[1, 2, 3, 4].map((bar) => (
                     <div
                       key={bar}
                       className={`h-1 flex-1 rounded ${
                         bar <= activeBars
-                          ? strength.level === "very-weak" || strength.level === "weak"
+                          ? strength.level === "very-weak" ||
+                            strength.level === "weak"
                             ? "bg-[hsl(var(--destructive))]/75"
                             : strength.level === "good"
-                            ? "bg-[hsl(var(--warning))]/75"
-                            : "bg-[hsl(var(--success))]/75"
+                              ? "bg-[hsl(var(--warning))]/75"
+                              : "bg-[hsl(var(--success))]/75"
                           : "bg-[hsl(var(--border))]"
                       }`}
                     />
@@ -249,8 +305,8 @@ export function SignUpForm() {
                     strength.level === "very-weak" || strength.level === "weak"
                       ? "text-[hsl(var(--destructive))]"
                       : strength.level === "good"
-                      ? "text-[hsl(var(--warning))]"
-                      : "text-[hsl(var(--success))]"
+                        ? "text-[hsl(var(--warning))]"
+                        : "text-[hsl(var(--success))]"
                   }`}
                   aria-live="polite"
                 >
@@ -276,8 +332,10 @@ export function SignUpForm() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))] rounded px-1 py-0.5"
-                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-1 py-0.5 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] focus:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
+                aria-label={
+                  showConfirmPassword ? "Hide password" : "Show password"
+                }
                 tabIndex={0}
               >
                 {showConfirmPassword ? "Hide" : "Show"}
@@ -309,7 +367,7 @@ export function SignUpForm() {
           Already have an account?{" "}
           <Link
             href="/login"
-            className="text-[hsl(var(--primary))] hover:underline underline-offset-4"
+            className="text-[hsl(var(--primary))] underline-offset-4 hover:underline"
           >
             Sign in
           </Link>

@@ -58,7 +58,14 @@ Dependencies flow inward: UI → Hooks → Application → Infrastructure. The d
 4. If validation passes, call `signUp(email, password)`
    - `signUp` creates user identity in Supabase
    - Returns `{ user }` only (no session)
-   - If `signUp` throws, show error toast and abort
+   - If `signUp` throws with `code: "user_already_exists"`:
+     - Show info toast: "User exists, signing you in…"
+     - Attempt `signIn(email, password)`
+       - On success: Show "Signed in successfully" and redirect to `/`
+       - On failure (wrong password): Show "Incorrect password. Please try again." and redirect to `/login`
+       - On failure (unconfirmed email): Show "Please confirm your email before signing in." and redirect to `/login`
+     - Abort sign-up flow
+   - If `signUp` throws other error: Show generic error toast and abort
 5. Immediately after `signUp`, call `signIn(email, password)`
 6. Branch on `signIn` result:
 
@@ -94,11 +101,24 @@ Dependencies flow inward: UI → Hooks → Application → Infrastructure. The d
 - Error codes are extracted from Supabase errors in the repository layer
 - UI branches only on structured `error.code`, never on error messages
 
+### Duplicate Email Auto Sign-In
+
+When a user attempts to sign up with an email that already exists:
+
+- Supabase returns error code `user_already_exists` (status 422)
+- UI shows: "User exists, signing you in…"
+- System automatically attempts sign-in with provided credentials
+- On success: User is signed in and redirected to home page
+- On failure: Error message displayed and user redirected to `/login`
+
+**See**: `/docs/features/signup-duplicate-email-auto-signin.md` for complete implementation details
+
 ### Security Considerations
 
-- No user enumeration: Sign-up flow does not reveal whether email exists
+- Controlled user enumeration: Sign-up flow reveals email existence only after signup attempt (acceptable UX trade-off)
 - Error normalization: Repository layer normalizes Supabase errors to structured codes
 - No token handling in UI: All token management delegated to Supabase
+- Password validation: Auto sign-in maintains same security as manual sign-in
 
 ## Sign-In Flow
 

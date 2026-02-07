@@ -5,18 +5,22 @@ A multi-tenant SaaS platform.
 ## Tech Stack
 
 ### Frontend
+
 - **Next.js 14** (App Router) - React framework with server components and routing
 - **TypeScript** - Type-safe development
 - **Tailwind CSS** - Utility-first CSS framework
 
 ### State & Data
+
 - **TanStack Query** - Server state management, caching, and data synchronization
 - **Zod** - Schema validation and runtime type checking
 
 ### Backend (To Be Configured)
+
 - **Supabase** - PostgreSQL database, authentication, and real-time subscriptions
 
 ### Quality Tools
+
 - **ESLint** - Code linting with Next.js and TypeScript rules
 - **Prettier** - Code formatting with Tailwind CSS plugin
 - **TypeScript** - Strict type checking enabled
@@ -76,11 +80,13 @@ This project follows a **modular monolith** architecture designed for:
 
 1. Clone the repository
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Copy environment variables:
+
    ```bash
    cp .env.example .env.local
    ```
@@ -114,6 +120,63 @@ npm run format
 # Check formatting
 npm run format:check
 ```
+
+### Testing
+
+#### Unit Tests (Vitest)
+
+```bash
+# Run unit tests
+npm test
+
+# Watch mode
+npm run test:watch
+
+# UI mode
+npm run test:ui
+```
+
+#### E2E Tests (Playwright + Supabase Local)
+
+**Prerequisites:**
+
+- Docker Desktop installed and running
+- Supabase CLI installed: `brew install supabase/tap/supabase`
+
+**First-time setup:**
+
+```bash
+# Start Supabase local services (downloads Docker images, ~30s first time)
+npm run supabase:start
+
+# Verify services are running
+npm run supabase:status
+```
+
+**Running tests:**
+
+```bash
+# Start app in E2E mode (separate terminal)
+npm run dev:e2e
+
+# Run E2E tests (global setup creates test user automatically)
+npm run test:e2e
+
+# E2E UI mode
+npm run test:e2e:ui
+
+# Stop Supabase when done
+npm run supabase:stop
+```
+
+**What happens during tests:**
+
+- Global setup creates default test user
+- All auth flows tested with real email capture
+- Emails captured in Inbucket at http://localhost:54324
+- Database resets on each `supabase start`
+
+See [E2E Testing Guide](./e2e/README.md) for details and [Supabase Local Guide](./supabase/README.md) for configuration.
 
 ## Feature Scope
 
@@ -173,6 +236,7 @@ These will be implemented in subsequent phases.
 ## Environment Configuration
 
 See `.env.example` for required environment variables. Currently includes:
+
 - Next.js configuration
 - Supabase placeholders (to be configured later)
 

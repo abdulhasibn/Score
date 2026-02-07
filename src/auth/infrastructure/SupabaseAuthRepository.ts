@@ -51,16 +51,26 @@ export class SupabaseAuthRepository implements AuthRepository {
       const authError = new Error(error.message) as Error & { code?: string };
       // Harden error code extraction: use error.code if available, otherwise extract from message
       // This parsing happens ONLY in repository layer, UI branches only on error.code
-      const supabaseError = error as { code?: string; status?: number; message: string };
+      const supabaseError = error as {
+        code?: string;
+        status?: number;
+        message: string;
+      };
       if (supabaseError.code) {
         // Use Supabase-provided code directly
         authError.code = supabaseError.code;
       } else {
         // Fallback: extract known codes from message (repository-only parsing)
         const message = supabaseError.message.toLowerCase();
-        if (message.includes("email_not_confirmed") || message.includes("email not confirmed")) {
+        if (
+          message.includes("email_not_confirmed") ||
+          message.includes("email not confirmed")
+        ) {
           authError.code = "email_not_confirmed";
-        } else if (message.includes("invalid login") || message.includes("invalid_credentials")) {
+        } else if (
+          message.includes("invalid login") ||
+          message.includes("invalid_credentials")
+        ) {
           authError.code = "invalid_login_credentials";
         }
       }
@@ -77,17 +87,25 @@ export class SupabaseAuthRepository implements AuthRepository {
     };
   }
 
-  async signUp(
-    email: string,
-    password: string
-  ): Promise<{ user: AuthUser }> {
+  async signUp(email: string, password: string): Promise<{ user: AuthUser }> {
     const { data, error } = await supabaseClient.auth.signUp({
       email,
       password,
     });
 
     if (error) {
-      throw new Error(`Sign up failed: ${error.message}`);
+      const authError = new Error(error.message) as Error & { code?: string };
+      // Extract error code from Supabase error for domain-layer handling
+      const supabaseError = error as {
+        code?: string;
+        status?: number;
+        message: string;
+      };
+      if (supabaseError.code) {
+        // Attach Supabase error code to the thrown error
+        authError.code = supabaseError.code;
+      }
+      throw authError;
     }
 
     if (!data.user) {
@@ -115,8 +133,8 @@ export class SupabaseAuthRepository implements AuthRepository {
       typeof window !== "undefined"
         ? `${window.location.origin}/reset-password`
         : process.env.NEXT_PUBLIC_SITE_URL
-        ? `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`
-        : "/reset-password";
+          ? `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`
+          : "/reset-password";
 
     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
       redirectTo,
@@ -140,14 +158,12 @@ export class SupabaseAuthRepository implements AuthRepository {
     }
   }
 
-  private mapSupabaseUserToAuthUser(
-    supabaseUser: {
-      id: string;
-      email?: string;
-      created_at?: string;
-      updated_at?: string;
-    }
-  ): AuthUser {
+  private mapSupabaseUserToAuthUser(supabaseUser: {
+    id: string;
+    email?: string;
+    created_at?: string;
+    updated_at?: string;
+  }): AuthUser {
     if (!supabaseUser.email) {
       throw new Error("User email is missing");
     }
@@ -164,19 +180,17 @@ export class SupabaseAuthRepository implements AuthRepository {
     };
   }
 
-  private mapSupabaseSessionToAuthSession(
-    supabaseSession: {
-      access_token: string;
-      refresh_token: string;
-      expires_at?: number;
-      user: {
-        id: string;
-        email?: string;
-        created_at?: string;
-        updated_at?: string;
-      };
-    }
-  ): AuthSession {
+  private mapSupabaseSessionToAuthSession(supabaseSession: {
+    access_token: string;
+    refresh_token: string;
+    expires_at?: number;
+    user: {
+      id: string;
+      email?: string;
+      created_at?: string;
+      updated_at?: string;
+    };
+  }): AuthSession {
     const expiresAt = supabaseSession.expires_at
       ? new Date(supabaseSession.expires_at * 1000)
       : new Date(Date.now() + 3600 * 1000);

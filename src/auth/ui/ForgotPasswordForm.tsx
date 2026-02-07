@@ -79,7 +79,11 @@ export function ForgotPasswordForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-4" noValidate>
+        <form
+          onSubmit={handleFormSubmit(onSubmit)}
+          className="space-y-4"
+          noValidate
+        >
           <div>
             <Label htmlFor="email" className="mb-2">
               Email
@@ -113,7 +117,7 @@ export function ForgotPasswordForm() {
           Remember your password?{" "}
           <Link
             href="/login"
-            className="text-[hsl(var(--primary))] hover:underline underline-offset-4"
+            className="text-[hsl(var(--primary))] underline-offset-4 hover:underline"
           >
             Sign in
           </Link>
