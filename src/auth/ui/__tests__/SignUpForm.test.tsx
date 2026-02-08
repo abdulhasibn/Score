@@ -67,14 +67,9 @@ describe("SignUpForm", () => {
   };
 
   describe("New user - confirmation required", () => {
-    it("shows success toast and does not redirect when signIn throws invalid_login_credentials", async () => {
+    it("shows success toast and does not attempt sign-in when signUp succeeds", async () => {
       const data = getValidFormData();
       mockSignUp.mockResolvedValue({ user: { id: "1", email: data.email } });
-      mockSignIn.mockRejectedValue(
-        Object.assign(new Error("Invalid login credentials"), {
-          code: "invalid_login_credentials",
-        })
-      );
 
       render(<SignUpForm />);
       await fillForm(data);
@@ -84,7 +79,7 @@ describe("SignUpForm", () => {
 
       await waitFor(() => {
         expect(mockSignUp).toHaveBeenCalledWith(data.email, data.password);
-        expect(mockSignIn).toHaveBeenCalledWith(data.email, data.password);
+        expect(mockSignIn).not.toHaveBeenCalled();
         expect(sonner.toast.success).toHaveBeenCalled();
         const successCall = vi.mocked(sonner.toast.success).mock.calls[0][0];
         expect(successCall).toMatch(/account created/i);
@@ -97,10 +92,19 @@ describe("SignUpForm", () => {
   describe("Existing confirmed user", () => {
     it("shows info toast and redirects when signIn succeeds", async () => {
       const data = getValidFormData();
-      mockSignUp.mockResolvedValue({ user: { id: "1", email: data.email } });
+      mockSignUp.mockRejectedValue(
+        Object.assign(new Error("User already registered"), {
+          code: "user_already_exists",
+        })
+      );
       mockSignIn.mockResolvedValue({
         user: { id: "1", email: data.email },
-        session: { accessToken: "token", refreshToken: "refresh", expiresAt: new Date(), user: { id: "1", email: data.email } },
+        session: {
+          accessToken: "token",
+          refreshToken: "refresh",
+          expiresAt: new Date(),
+          user: { id: "1", email: data.email },
+        },
       });
 
       render(<SignUpForm />);
@@ -122,9 +126,13 @@ describe("SignUpForm", () => {
   });
 
   describe("Existing unconfirmed user", () => {
-    it("shows error toast and does not redirect when signIn throws email_not_confirmed", async () => {
+    it("shows error toast and redirects to login when signIn throws email_not_confirmed", async () => {
       const data = getValidFormData();
-      mockSignUp.mockResolvedValue({ user: { id: "1", email: data.email } });
+      mockSignUp.mockRejectedValue(
+        Object.assign(new Error("User already registered"), {
+          code: "user_already_exists",
+        })
+      );
       mockSignIn.mockRejectedValue(
         Object.assign(new Error("Email not confirmed"), {
           code: "email_not_confirmed",
@@ -143,7 +151,36 @@ describe("SignUpForm", () => {
         expect(sonner.toast.error).toHaveBeenCalled();
         const errorCall = vi.mocked(sonner.toast.error).mock.calls[0][0];
         expect(errorCall).toMatch(/confirm.*email/i);
-        expect(mockReplace).not.toHaveBeenCalled();
+        expect(mockReplace).toHaveBeenCalledWith("/login");
+      });
+    });
+
+    it("shows incorrect password error and redirects to login on invalid credentials", async () => {
+      const data = getValidFormData();
+      mockSignUp.mockRejectedValue(
+        Object.assign(new Error("User already registered"), {
+          code: "user_already_exists",
+        })
+      );
+      mockSignIn.mockRejectedValue(
+        Object.assign(new Error("Invalid login credentials"), {
+          code: "invalid_login_credentials",
+        })
+      );
+
+      render(<SignUpForm />);
+      await fillForm(data);
+
+      const submitButton = screen.getByRole("button", { name: /sign up/i });
+      await userEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockSignUp).toHaveBeenCalledWith(data.email, data.password);
+        expect(mockSignIn).toHaveBeenCalledWith(data.email, data.password);
+        expect(sonner.toast.error).toHaveBeenCalledWith(
+          "Incorrect password. Please try again."
+        );
+        expect(mockReplace).toHaveBeenCalledWith("/login");
       });
     });
   });

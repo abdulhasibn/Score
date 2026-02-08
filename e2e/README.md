@@ -37,7 +37,24 @@ npm install
 
 ## Quick Start
 
-### First Time Setup
+### Full Reset & Test (One Command)
+
+For a complete environment reset and test run:
+
+```bash
+npm run setup:test
+```
+
+This single command:
+- Stops all local services (Supabase Local, Colima)
+- Starts everything from scratch
+- Verifies endpoints are healthy
+- Starts Next.js dev server with E2E config
+- Runs UI tests (parallel, non-blocking)
+- Runs E2E tests
+- Stops all processes and prints summary
+
+### First Time Setup (Manual Steps)
 
 0. **Run the setup script** (recommended):
 

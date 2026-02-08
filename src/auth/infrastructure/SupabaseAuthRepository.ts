@@ -3,6 +3,44 @@ import type { AuthRepository } from "../domain/AuthRepository";
 import type { AuthUser } from "../domain/AuthUser";
 import type { AuthSession } from "../domain/AuthSession";
 
+type AuthErrorWithCode = Error & { code?: string };
+
+type SupabaseErrorLike = {
+  code?: string;
+  message: string;
+};
+
+function createAuthError(message: string, code?: string): AuthErrorWithCode {
+  const authError = new Error(message) as AuthErrorWithCode;
+
+  if (code) {
+    authError.code = code;
+  }
+
+  return authError;
+}
+
+function isDuplicateSignUpError(error: SupabaseErrorLike): boolean {
+  const normalizedCode = error.code?.toLowerCase();
+  const normalizedMessage = error.message.toLowerCase();
+
+  if (normalizedCode === "user_already_exists" || normalizedCode === "email_exists") {
+    return true;
+  }
+
+  return (
+    normalizedMessage.includes("already registered") ||
+    normalizedMessage.includes("already been registered") ||
+    normalizedMessage.includes("already exists")
+  );
+}
+
+function isExistingUserObfuscatedSignUp(user: {
+  identities?: unknown[] | null;
+}): boolean {
+  return Array.isArray(user.identities) && user.identities.length === 0;
+}
+
 /**
  * SupabaseAuthRepository
  *
@@ -48,14 +86,10 @@ export class SupabaseAuthRepository implements AuthRepository {
     });
 
     if (error) {
-      const authError = new Error(error.message) as Error & { code?: string };
+      const authError = new Error(error.message) as AuthErrorWithCode;
       // Harden error code extraction: use error.code if available, otherwise extract from message
       // This parsing happens ONLY in repository layer, UI branches only on error.code
-      const supabaseError = error as {
-        code?: string;
-        status?: number;
-        message: string;
-      };
+      const supabaseError = error as SupabaseErrorLike;
       if (supabaseError.code) {
         // Use Supabase-provided code directly
         authError.code = supabaseError.code;
@@ -94,22 +128,24 @@ export class SupabaseAuthRepository implements AuthRepository {
     });
 
     if (error) {
-      const authError = new Error(error.message) as Error & { code?: string };
-      // Extract error code from Supabase error for domain-layer handling
-      const supabaseError = error as {
-        code?: string;
-        status?: number;
-        message: string;
-      };
-      if (supabaseError.code) {
-        // Attach Supabase error code to the thrown error
-        authError.code = supabaseError.code;
+      const supabaseError = error as SupabaseErrorLike;
+
+      // Normalize duplicate-email outcomes into one stable code.
+      if (isDuplicateSignUpError(supabaseError)) {
+        throw createAuthError(supabaseError.message, "user_already_exists");
       }
-      throw authError;
+
+      throw createAuthError(supabaseError.message, supabaseError.code);
     }
 
     if (!data.user) {
       throw new Error("Sign up failed: User was not created");
+    }
+
+    // Supabase can return HTTP 200 for existing emails with an obfuscated user
+    // payload where identities is an empty array.
+    if (isExistingUserObfuscatedSignUp(data.user)) {
+      throw createAuthError("User already registered", "user_already_exists");
     }
 
     // Return user only - ignore session completely

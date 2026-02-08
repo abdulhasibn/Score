@@ -1,5 +1,9 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+
+// Auth-provider-backed signup flows are sensitive to timing/rate limits.
+// Keep this file serial to reduce cross-test interference.
+test.describe.configure({ mode: "serial" });
 
 /**
  * Sign-Up E2E Tests
@@ -16,7 +20,19 @@ import { createClient } from "@supabase/supabase-js";
  */
 function generateTestEmail(): string {
   const timestamp = Date.now();
-  return `test-${timestamp}@example.com`;
+  const randomSuffix = Math.random().toString(36).slice(2, 10);
+  return `test-${timestamp}-${randomSuffix}@example.com`;
+}
+
+/**
+ * Helper: Assert first-time signup completion toast
+ */
+async function expectFirstTimeSignupToast(page: Page): Promise<void> {
+  await expect(
+    page.getByText(
+      "Account created. Please check your email to confirm your registration."
+    )
+  ).toBeVisible({ timeout: 3000 });
 }
 
 /**
@@ -39,15 +55,36 @@ async function confirmUserEmail(email: string): Promise<void> {
     },
   });
 
-  // Get user by email
-  const { data: users, error: listError } =
-    await supabaseAdmin.auth.admin.listUsers();
+  // Get user by email (paginate to avoid false negatives with large user sets)
+  const perPage = 200;
+  let page = 1;
+  let user:
+    | {
+        id: string;
+        email?: string;
+      }
+    | undefined;
 
-  if (listError) {
-    throw new Error(`Failed to list users: ${listError.message}`);
+  while (!user) {
+    const { data: users, error: listError } =
+      await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage,
+      });
+
+    if (listError) {
+      throw new Error(`Failed to list users: ${listError.message}`);
+    }
+
+    user = users.users.find((u) => u.email === email);
+
+    // Stop when we reach the last page.
+    if (users.users.length < perPage) {
+      break;
+    }
+
+    page += 1;
   }
-
-  const user = users.users.find((u) => u.email === email);
 
   if (!user) {
     throw new Error(`User not found: ${email}`);
@@ -65,7 +102,7 @@ async function confirmUserEmail(email: string): Promise<void> {
 }
 
 test.describe("Sign Up - Option A: Unconfirmed User Flow", () => {
-  test("should show confirmation toast and prevent sign-in until email confirmed", async ({
+  test("should show signup completion toast and prevent sign-in until email confirmed", async ({
     page,
   }) => {
     // Arrange - Generate unique credentials
@@ -91,12 +128,8 @@ test.describe("Sign Up - Option A: Unconfirmed User Flow", () => {
     // Submit form
     await page.getByRole("button", { name: "Sign Up" }).click();
 
-    // Assert - Success toast appears (toasts auto-dismiss after 4s, so check quickly)
-    await expect(
-      page.getByText(
-        "Account created. Please check your email to confirm your registration."
-      )
-    ).toBeVisible({ timeout: 3000 });
+    // Assert - first-time signup completion toast appears (toasts auto-dismiss after 4s)
+    await expectFirstTimeSignupToast(page);
 
     // Act - Attempt to sign in with unconfirmed account
     await page.goto("/login");
@@ -145,12 +178,8 @@ test.describe("Sign Up - Option B: Auto-Confirmed User Flow", () => {
     // Submit form
     await page.getByRole("button", { name: "Sign Up" }).click();
 
-    // Wait for signup to complete (toasts auto-dismiss after 4s, so check quickly)
-    await expect(
-      page.getByText(
-        "Account created. Please check your email to confirm your registration."
-      )
-    ).toBeVisible({ timeout: 3000 });
+    // Wait for first-time signup completion toast (toasts auto-dismiss after 4s)
+    await expectFirstTimeSignupToast(page);
 
     // Act - Auto-confirm user via Admin API
     await confirmUserEmail(email);
@@ -199,12 +228,8 @@ test.describe("Sign Up - Duplicate Email Auto Sign-In", () => {
     await page.getByLabel("Confirm Password").fill(password);
     await page.getByRole("button", { name: "Sign Up" }).click();
 
-    // Wait for signup toast
-    await expect(
-      page.getByText(
-        "Account created. Please check your email to confirm your registration."
-      )
-    ).toBeVisible({ timeout: 3000 });
+    // Wait for initial first-time signup completion toast
+    await expectFirstTimeSignupToast(page);
 
     // Confirm the user via Admin API
     await confirmUserEmail(email);
@@ -257,12 +282,8 @@ test.describe("Sign Up - Duplicate Email Auto Sign-In", () => {
     await page.getByLabel("Confirm Password").fill(correctPassword);
     await page.getByRole("button", { name: "Sign Up" }).click();
 
-    // Wait for signup toast
-    await expect(
-      page.getByText(
-        "Account created. Please check your email to confirm your registration."
-      )
-    ).toBeVisible({ timeout: 3000 });
+    // Wait for initial first-time signup completion toast
+    await expectFirstTimeSignupToast(page);
 
     // Confirm the user via Admin API
     await confirmUserEmail(email);

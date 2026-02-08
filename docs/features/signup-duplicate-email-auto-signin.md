@@ -9,6 +9,8 @@
 
 Provides a seamless user experience when a user attempts to sign up with an email that already exists. Instead of showing an error, the system automatically attempts to sign them in, reducing friction and improving usability.
 
+For first-time registrations, the flow is intentionally different: show account-created confirmation and wait for email verification without auto sign-in.
+
 ---
 
 ## User Flow
@@ -71,22 +73,23 @@ This feature follows SOLID principles with clear separation of concerns across t
 
 #### 1. Infrastructure Layer (`SupabaseAuthRepository.ts`)
 
-**Responsibility**: Extract and attach Supabase error codes to thrown errors
+**Responsibility**: Normalize existing-user outcomes into a stable coded error
 
-**Implementation**: When `signUp()` receives an error from Supabase, it extracts the `code` property and attaches it to the thrown error object.
+**Implementation**:
+- On explicit duplicate-email errors (`user_already_exists` or equivalent message), throw `Error & { code: "user_already_exists" }`.
+- On obfuscated duplicate-email success (`200` with `user.identities = []`), also throw `code: "user_already_exists"`.
+- Only true first-time signup successes (`identities` present/non-empty) return `{ user }`.
 
 ```typescript
 if (error) {
-  const authError = new Error(error.message) as Error & { code?: string };
-  const supabaseError = error as {
-    code?: string;
-    status?: number;
-    message: string;
-  };
-  if (supabaseError.code) {
-    authError.code = supabaseError.code;
+  if (isDuplicateSignUpError(error)) {
+    throw createAuthError(error.message, "user_already_exists");
   }
-  throw authError;
+  throw createAuthError(error.message, error.code);
+}
+
+if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+  throw createAuthError("User already registered", "user_already_exists");
 }
 ```
 
@@ -94,33 +97,34 @@ if (error) {
 
 **Responsibility**: Preserve error codes through the application boundary
 
-**Implementation**: Rethrows repository errors as-is to maintain the `code` property.
+**Implementation**: Preserves coded repository errors and wraps unknown non-Error failures safely.
 
 ```typescript
 async signUp(email: string, password: string): Promise<{ user: AuthUser }> {
   try {
     return await this.authRepository.signUp(email, password);
   } catch (error) {
-    if (error instanceof Error && error.message) {
-      throw error; // Preserves error.code
-    }
-    throw new Error(`Sign up failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw wrapSignUpError(error);
   }
 }
 ```
 
 #### 3. UI Layer (`SignUpForm.tsx`)
 
-**Responsibility**: Handle duplicate email scenario with auto sign-in flow
+**Responsibility**: Handle first-time signup confirmation separately from duplicate-email auto sign-in
 
-**Implementation**: On `user_already_exists` error, show "signing you in" message and attempt sign-in.
+**Implementation**:
+- If `signUp` succeeds: show account-created confirmation and stop.
+- If `signUp` throws `user_already_exists`: show "signing you in" and attempt sign-in.
 
 ```typescript
-catch (signUpErr) {
+try {
+  await signUp(data.email, data.password);
+  toast.success("Account created. Please check your email to confirm your registration.");
+  return;
+} catch (signUpErr) {
   const error = signUpErr as Error & { code?: string };
-  const errorCode = error.code;
-
-  if (errorCode === "user_already_exists") {
+  if (error.code === "user_already_exists") {
     toast.info("User exists, signing you in…");
 
     try {
@@ -140,8 +144,9 @@ catch (signUpErr) {
         toast.error("Unable to sign in. Please try again.");
         router.replace("/login");
       }
+    } finally {
+      setIsLoading(false);
     }
-    return;
   }
 }
 ```
@@ -159,6 +164,20 @@ When a user attempts to sign up with an existing email, Supabase returns:
   "message": "User already registered"
 }
 ```
+
+In some environments, Supabase may instead return an obfuscated success payload:
+
+```json
+{
+  "user": {
+    "email": "existing@example.com",
+    "identities": []
+  },
+  "session": null
+}
+```
+
+This response is normalized to `code: "user_already_exists"` in the repository layer.
 
 When sign-in fails with wrong password:
 
@@ -188,6 +207,8 @@ Two dedicated Playwright tests validate this behavior:
 1. Create and confirm a user account
 2. Attempt to sign up again with same email and correct password
 3. **Assertions**:
+   - Initial account creation shows:
+     - "Account created. Please check your email to confirm your registration."
    - "User exists, signing you in…" toast appears
    - Successfully redirected to `/` (home page)
    - User is authenticated
@@ -197,6 +218,8 @@ Two dedicated Playwright tests validate this behavior:
 1. Create and confirm a user account
 2. Attempt to sign up again with same email but wrong password
 3. **Assertions**:
+   - Initial account creation shows:
+     - "Account created. Please check your email to confirm your registration."
    - "User exists, signing you in…" toast appears
    - Redirected to `/login` page
    - User can retry with correct password or reset
@@ -208,7 +231,7 @@ Two dedicated Playwright tests validate this behavior:
 npm run test:e2e -- --grep "Duplicate Email"
 
 # Run all signup tests
-npm run test:e2e e2e/auth/sign-up.spec.ts
+npm run test:e2e -- e2e/auth/sign-up.spec.ts
 ```
 
 ---

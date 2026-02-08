@@ -6,7 +6,25 @@ Enable full end-to-end testing of authentication flows, including email-based pa
 
 ## User Flow
 
-### Developer Local Testing
+### Quick Start: Full Reset & Test
+
+For a complete environment reset and test run:
+
+1. Run the all-in-one script:
+   ```bash
+   npm run setup:test
+   ```
+
+This script:
+- Stops Supabase Local and Colima
+- Starts everything from scratch
+- Verifies all endpoints are healthy
+- Starts Next.js dev server with E2E config
+- Runs UI tests (parallel, non-blocking)
+- Runs E2E tests
+- Stops all processes and prints summary
+
+### Developer Local Testing (Manual Steps)
 
 1. Developer installs Supabase CLI
 2. Runs `npm run supabase:start` to spin up local services

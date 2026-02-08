@@ -140,10 +140,19 @@ npm run test:ui
 
 **Prerequisites:**
 
-- Docker Desktop installed and running
+- Docker runtime (Colima or Docker Desktop)
 - Supabase CLI installed: `brew install supabase/tap/supabase`
 
-**First-time setup:**
+**Quick Start (Recommended):**
+
+```bash
+# Full reset: stop all services, start fresh, run UI + E2E tests
+npm run setup:test
+```
+
+This single command handles everything: cleanup, startup, dev server, verification, and testing.
+
+**Manual Setup:**
 
 ```bash
 # Start Supabase local services (downloads Docker images, ~30s first time)

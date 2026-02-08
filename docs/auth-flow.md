@@ -57,8 +57,12 @@ Dependencies flow inward: UI → Hooks → Application → Infrastructure. The d
 3. If validation fails, show inline error messages and abort
 4. If validation passes, call `signUp(email, password)`
    - `signUp` creates user identity in Supabase
-   - Returns `{ user }` only (no session)
-   - If `signUp` throws with `code: "user_already_exists"`:
+   - Returns `{ user }` only (no session) for first-time registrations
+   - If `signUp` succeeds (first-time user):
+     - Show success toast: "Account created. Please check your email to confirm your registration."
+     - Do not call `signIn` automatically
+     - Do not redirect
+   - If `signUp` throws with `code: "user_already_exists"` (existing-email attempt):
      - Show info toast: "User exists, signing you in…"
      - Attempt `signIn(email, password)`
        - On success: Show "Signed in successfully" and redirect to `/`
@@ -66,37 +70,21 @@ Dependencies flow inward: UI → Hooks → Application → Infrastructure. The d
        - On failure (unconfirmed email): Show "Please confirm your email before signing in." and redirect to `/login`
      - Abort sign-up flow
    - If `signUp` throws other error: Show generic error toast and abort
-5. Immediately after `signUp`, call `signIn(email, password)`
-6. Branch on `signIn` result:
 
-   **A) signIn succeeds**
-   - User exists and email is confirmed
-   - Show info toast: "Signing you in…"
-   - Redirect to `/`
+### Why signIn Runs Only for Existing-Email Signups
 
-   **B) signIn fails with `code: "email_not_confirmed"`**
-   - User exists but email not verified
-   - Show error toast: "Please confirm your email before signing in."
-   - Do not redirect
-
-   **C) signIn fails with `code: "invalid_login_credentials"`**
-   - Brand new registration (most common case)
-   - Show success toast: "Account created. Please check your email to confirm your registration."
-   - Do not redirect
-
-### Why signUp is Always Followed by signIn
-
-- `signUp` creates identity only; it does not authenticate
-- `signIn` is the authority for authentication state
-- This pattern handles three scenarios in one flow:
-  - New user (needs confirmation)
-  - Existing confirmed user (auto sign-in)
-  - Existing unconfirmed user (blocked)
+- `signUp` remains the source of truth for first-time account creation
+- First-time signups should show confirmation guidance without triggering an avoidable auth error
+- Duplicate-email signups still use `signIn` as the authentication authority
+- This keeps UX clean while preserving the duplicate auto sign-in experience
 
 ### Supabase Response Interpretation
 
-- `signUp` always returns a user if successful, regardless of confirmation status
-- `signUp` does not return a session (Supabase behavior)
+- `signUp` may return an obfuscated success response for existing users
+- Infrastructure normalizes existing-user outcomes to `code: "user_already_exists"`
+  - explicit duplicate error from Supabase
+  - obfuscated success where `user.identities` is an empty array
+- First-time signups are identified by successful `signUp` responses with non-empty identities (or identities omitted)
 - `signIn` returns session only if email is confirmed
 - Error codes are extracted from Supabase errors in the repository layer
 - UI branches only on structured `error.code`, never on error messages
@@ -232,8 +220,8 @@ When a user attempts to sign up with an email that already exists:
 ### Email Enumeration Prevention
 
 - Forgot password flow always shows success message
-- Sign-up flow does not reveal if email exists
-- Error messages are generic and do not leak information
+- Sign-up flow reveals existing-email state only after explicit signup submission
+- Duplicate-email flow uses controlled messaging for UX ("User exists, signing you in…")
 
 ### Error Normalization
 

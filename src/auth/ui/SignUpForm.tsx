@@ -168,34 +168,11 @@ export function SignUpForm() {
       }
     }
 
-    // Step 2: Immediately attempt signIn (signUp succeeded)
-    try {
-      await signIn(data.email, data.password);
-      // A) signIn SUCCESS - user exists + email confirmed
-      toast.info("Signing you in…");
-      router.replace("/");
-    } catch (signInErr) {
-      // signIn failed - branch ONLY on error.code (not error.message)
-      const error = signInErr as Error & { code?: string };
-      const errorCode = error.code;
-
-      if (errorCode === "email_not_confirmed") {
-        // B) signIn FAILS with email_not_confirmed - user exists but email not verified
-        toast.error("Please confirm your email before signing in.");
-      } else if (errorCode === "invalid_login_credentials") {
-        // C) signIn FAILS with invalid_login_credentials - brand new registration OR confirmation pending
-        toast.success(
-          "Account created. Please check your email to confirm your registration."
-        );
-      } else {
-        // Fallback for unexpected errors
-        toast.success(
-          "Account created. Please check your email to confirm your registration."
-        );
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    // Step 2: New user created successfully - ask for email confirmation
+    toast.success(
+      "Account created. Please check your email to confirm your registration."
+    );
+    setIsLoading(false);
   };
 
   const onError = (errors: FieldErrors<SignUpFormData>) => {

@@ -2,9 +2,9 @@
 
 ## Test Strategy Overview
 
-The authentication system uses unit and component tests to validate UI behavior and control flow. Supabase is mocked at the boundary, ensuring tests are fast, deterministic, and isolated from external dependencies.
+The authentication system uses unit, component, and application-layer tests to validate UI behavior, control flow, and cross-layer error contracts. Supabase is mocked at the boundary, ensuring tests are fast, deterministic, and isolated from external dependencies.
 
-### Why Unit + Component Tests
+### Why Unit + Component + Application Tests
 
 - **Speed**: Tests run in milliseconds without network calls
 - **Determinism**: No flaky tests from network timeouts or Supabase availability
@@ -18,12 +18,11 @@ The authentication system uses unit and component tests to validate UI behavior 
 - Mocking allows testing error scenarios that are difficult to reproduce with real Supabase
 - Tests validate that the application correctly handles Supabase responses
 
-### Why E2E is Deferred
+### E2E Coverage Note
 
-- E2E tests require full infrastructure setup (Supabase project, email delivery)
-- E2E tests are slower and more brittle
-- Current test coverage validates all control flow paths
-- E2E tests will be added when full integration testing is required
+- E2E auth flows are covered in `e2e/auth/`
+- This document focuses on Vitest-based suites (unit/component/application/infrastructure)
+- End-to-end setup details are documented in `e2e/README.md`
 
 ## Tooling
 
@@ -47,8 +46,9 @@ The authentication system uses unit and component tests to validate UI behavior 
 
 ### Test Structure
 
-- Tests live next to components: `src/auth/ui/__tests__/`
-- Each form component has its own test file
+- UI/component tests: `src/auth/ui/__tests__/`
+- Application-layer tests: `src/auth/application/__tests__/`
+- Infrastructure contract tests: `src/auth/infrastructure/__tests__/`
 - Tests use descriptive `describe` and `it` blocks
 - Helper functions (`getValidFormData`, `fillForm`) reduce duplication
 
@@ -57,18 +57,23 @@ The authentication system uses unit and component tests to validate UI behavior 
 ### Test Cases
 
 **New user - confirmation required**
-- **Flow**: `signUp` succeeds, `signIn` throws `invalid_login_credentials`
-- **Expected**: Success toast shown, no redirect
+- **Flow**: `signUp` succeeds
+- **Expected**: Success toast shown, `signIn` not called, no redirect
 - **Status**: Written and validated
 
 **Existing confirmed user**
-- **Flow**: `signUp` succeeds, `signIn` succeeds
+- **Flow**: `signUp` throws `user_already_exists`, `signIn` succeeds
 - **Expected**: Info toast shown, redirect to `/`
 - **Status**: Written and validated
 
 **Existing unconfirmed user**
-- **Flow**: `signUp` succeeds, `signIn` throws `email_not_confirmed`
-- **Expected**: Error toast shown, no redirect
+- **Flow**: `signUp` throws `user_already_exists`, `signIn` throws `email_not_confirmed`
+- **Expected**: Error toast shown, redirect to `/login`
+- **Status**: Written and validated
+
+**Existing user - wrong password**
+- **Flow**: `signUp` throws `user_already_exists`, `signIn` throws `invalid_login_credentials`
+- **Expected**: Incorrect password toast shown, redirect to `/login`
 - **Status**: Written and validated
 
 **Validation failure - invalid email**
@@ -219,6 +224,77 @@ The authentication system uses unit and component tests to validate UI behavior 
 - Tests wait for redirect with 3 second timeout to account for 2 second delay
 - Real timers used (not fake timers) for compatibility with user-event
 
+## AuthService Tests
+
+### Scope
+
+Service-level contract tests validate `AuthService` behavior at the `AuthRepository` boundary.
+
+### Test Cases
+
+**Successful sign-in pass-through**
+- **Flow**: Repository `signIn` resolves with `{ user, session }`
+- **Expected**: Service returns repository payload unchanged
+- **Status**: Written and validated
+
+**Message wrapping**
+- **Flow**: Repository `signIn` throws uncoded error
+- **Expected**: Service throws with `Sign in failed: ...` message prefix
+- **Status**: Written and validated
+
+**Error code propagation**
+- **Flow**: Repository `signIn` throws coded errors (`email_not_confirmed`, `invalid_login_credentials`)
+- **Expected**: Service preserves `error.code` while wrapping message
+- **Status**: Written and validated
+
+**Safe wrapping without code**
+- **Flow**: Repository `signIn` throws error without `code`
+- **Expected**: Service throws wrapped error and `error.code` remains undefined
+- **Status**: Written and validated
+
+**signUp success pass-through**
+- **Flow**: Repository `signUp` resolves with `{ user }`
+- **Expected**: Service returns repository payload unchanged
+- **Status**: Written and validated
+
+**signUp coded-error pass-through**
+- **Flow**: Repository `signUp` throws coded error (`user_already_exists`)
+- **Expected**: Service preserves `error.code` and message
+- **Status**: Written and validated
+
+### Mocking
+
+- `AuthRepository`: mocked at interface boundary
+- No `useAuth` or UI mocking in service tests
+
+## SupabaseAuthRepository Tests
+
+### Scope
+
+Infrastructure contract tests validate Supabase-specific sign-up normalization in `SupabaseAuthRepository`.
+
+### Test Cases
+
+**First-time signup mapping**
+- **Flow**: Supabase `signUp` returns user with non-empty `identities`
+- **Expected**: Repository returns mapped domain user
+- **Status**: Written and validated
+
+**Obfuscated existing-user response**
+- **Flow**: Supabase `signUp` returns success with `user.identities = []`
+- **Expected**: Repository throws coded error `user_already_exists`
+- **Status**: Written and validated
+
+**Explicit duplicate error**
+- **Flow**: Supabase `signUp` returns duplicate-email error
+- **Expected**: Repository throws coded error `user_already_exists`
+- **Status**: Written and validated
+
+**Duplicate message fallback**
+- **Flow**: Supabase `signUp` duplicate message without explicit code
+- **Expected**: Repository normalizes to coded error `user_already_exists`
+- **Status**: Written and validated
+
 ## What Is NOT Tested (By Design)
 
 ### Supabase Internal Behavior
@@ -241,16 +317,17 @@ The authentication system uses unit and component tests to validate UI behavior 
 
 ### E2E Flows
 
-- End-to-end user journeys are not tested
-- Email delivery is not tested
-- Token validation in reset links is not tested
-- These require full infrastructure setup and are deferred
+- End-to-end user journeys are not covered in this Vitest suite
+- Email delivery is not covered in this Vitest suite
+- Token validation in reset links is not covered in this Vitest suite
+- These are covered by Playwright tests in `e2e/auth/`
 
 ### Integration Boundaries
 
-- Tests mock at the `useAuth` hook boundary
-- `AuthService` and `AuthRepository` are not directly tested
-- Integration between layers is validated through component tests
+- UI/component tests mock at the `useAuth` hook boundary
+- Application tests mock at the `AuthRepository` boundary
+- `AuthService.signIn` wrapping and `error.code` propagation are directly tested
+- `SupabaseAuthRepository.signUp` normalization (`identities` + duplicate codes) is directly tested with mocked Supabase responses
 
 ## Guarantees Provided by Tests
 
@@ -258,7 +335,7 @@ The authentication system uses unit and component tests to validate UI behavior 
 
 Tests prevent regressions in:
 
-- Control flow logic (sign-up → sign-in pattern)
+- Control flow logic (first-time signup vs existing-email auto sign-in)
 - Error handling (code extraction, error normalization)
 - Security behavior (email enumeration protection)
 - Validation rules (password strength, email format)
@@ -278,12 +355,13 @@ The test suite provides high confidence that:
 
 - **UI behavior**: Fully covered
 - **Control flow**: Fully covered
+- **Application contract**: `AuthService.signIn` and `AuthService.signUp` contract behavior covered
 - **Error handling**: Fully covered
 - **Validation**: Fully covered
 - **Security rules**: Fully covered
 
 The test suite does not cover:
-- Infrastructure layer internals (Supabase)
+- Supabase network behavior (real provider responses)
 - Network-level behavior
 - End-to-end user journeys
 - Email delivery

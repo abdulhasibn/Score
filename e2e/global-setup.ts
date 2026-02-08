@@ -1,5 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 
+type ErrorWithOptionalCode = Error & {
+  code?: string;
+};
+
+function hasErrorCode(error: unknown, expectedCode: string): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    (error as ErrorWithOptionalCode).code === expectedCode
+  );
+}
+
 /**
  * Global E2E Test Setup
  *
@@ -51,7 +63,14 @@ async function globalSetup() {
 
   try {
     // Check if user already exists
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: users, error: listError } =
+      await supabaseAdmin.auth.admin.listUsers();
+
+    if (listError) {
+      console.error("❌ Failed to list users:", listError.message);
+      throw listError;
+    }
+
     const existingUser = users?.users?.find((u) => u.email === testEmail);
 
     if (existingUser) {
@@ -67,6 +86,11 @@ async function globalSetup() {
     });
 
     if (error) {
+      if (error.code === "email_exists") {
+        console.log(`✅ Test user already exists: ${testEmail}`);
+        return;
+      }
+
       console.error("❌ Failed to create test user:", error.message);
       throw error;
     }
@@ -74,6 +98,11 @@ async function globalSetup() {
     console.log(`✅ Test user created successfully: ${testEmail}`);
     console.log(`   User ID: ${user.user?.id}`);
   } catch (error) {
+    if (hasErrorCode(error, "email_exists")) {
+      console.log(`✅ Test user already exists: ${testEmail}`);
+      return;
+    }
+
     console.error("❌ Global setup failed:", error);
     throw error;
   }

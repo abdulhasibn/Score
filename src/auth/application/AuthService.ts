@@ -2,6 +2,42 @@ import type { AuthRepository } from "../domain/AuthRepository";
 import type { AuthUser } from "../domain/AuthUser";
 import type { AuthSession } from "../domain/AuthSession";
 
+type AuthErrorWithCode = Error & { code?: string };
+
+function wrapSignInError(error: unknown): AuthErrorWithCode {
+  const errorMessage = error instanceof Error ? error.message : "Unknown error";
+  const wrappedError = new Error(`Sign in failed: ${errorMessage}`) as AuthErrorWithCode;
+
+  if (
+    error instanceof Error &&
+    "code" in error &&
+    typeof (error as { code?: unknown }).code === "string"
+  ) {
+    wrappedError.code = (error as { code: string }).code;
+  }
+
+  return wrappedError;
+}
+
+function wrapSignUpError(error: unknown): AuthErrorWithCode {
+  if (error instanceof Error && error.message) {
+    return error as AuthErrorWithCode;
+  }
+
+  const errorMessage = error instanceof Error ? error.message : "Unknown error";
+  const wrappedError = new Error(`Sign up failed: ${errorMessage}`) as AuthErrorWithCode;
+
+  if (
+    error instanceof Error &&
+    "code" in error &&
+    typeof (error as { code?: unknown }).code === "string"
+  ) {
+    wrappedError.code = (error as { code: string }).code;
+  }
+
+  return wrappedError;
+}
+
 /**
  * AuthService
  *
@@ -57,10 +93,8 @@ export class AuthService {
     try {
       return await this.authRepository.signIn(email, password);
     } catch (error) {
-      // Wrap repository errors with application context
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      throw new Error(`Sign in failed: ${errorMessage}`);
+      // Preserve repository-provided error code while adding application context.
+      throw wrapSignInError(error);
     }
   }
 
@@ -76,14 +110,7 @@ export class AuthService {
     try {
       return await this.authRepository.signUp(email, password);
     } catch (error) {
-      // If error already has a descriptive message, rethrow it as-is
-      // Otherwise, wrap it with context
-      if (error instanceof Error && error.message) {
-        throw error;
-      }
-      throw new Error(
-        `Sign up failed: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
+      throw wrapSignUpError(error);
     }
   }
 
