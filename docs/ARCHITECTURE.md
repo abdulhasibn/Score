@@ -70,6 +70,60 @@ This application follows a **modular monolith** architecture, designed for:
 4. **Data Layer** (`/src/lib`) - Supabase client and data access
 5. **Database** (Supabase) - PostgreSQL with RLS policies
 
+## Supabase Client Architecture
+
+The application uses two Supabase clients to support both client-side and server-side operations:
+
+### Browser Client (`src/lib/supabaseClient.ts`)
+
+- **Usage**: Client-side operations in React components, domain services, and infrastructure repositories
+- **Implementation**: `createClient` from `@supabase/supabase-js`
+- **Purpose**: Browser-based authentication, API calls from client components
+- **Examples**:
+  - `SupabaseAuthRepository` (infrastructure layer)
+  - Client-side data fetching in components
+  - Real-time subscriptions
+
+### Server Client (`src/lib/supabase/server.ts`)
+
+- **Usage**: Server-side operations in Next.js Server Components and Server Actions
+- **Implementation**: `createServerClient` from `@supabase/ssr`
+- **Purpose**: Server-side session management, cookie handling, SSR support
+- **Examples**:
+  - `getSession()` helper for Server Components
+  - `signOut()` Server Action
+  - API routes (when implemented)
+
+### When to Use Which Client
+
+| Context | Client to Use | Rationale |
+|---------|--------------|-----------|
+| React Client Components (`"use client"`) | Browser Client | Runs in browser, needs direct client instance |
+| Infrastructure Repositories | Browser Client | Domain layer is client-agnostic, uses browser client via repositories |
+| Server Components | Server Client | Runs on server, needs cookie-based session management |
+| Server Actions | Server Client | Runs on server, needs secure cookie handling |
+| API Routes (future) | Server Client | Server-side endpoints require SSR client |
+
+### Design Rationale
+
+- **Separation of Concerns**: Browser client for client-side ops, server client for SSR/actions
+- **Security**: Server client handles secure cookie-based sessions without exposing credentials
+- **Next.js Compatibility**: Server client integrates seamlessly with App Router SSR patterns
+- **Domain Independence**: Domain/infrastructure layers use browser client, remaining agnostic to server context
+
+### Client Consistency (Single Source of Truth)
+
+The codebase uses **exactly two** Supabase client entry points. Do not add or use other Supabase client modules for app code:
+
+| Entry point | File | Package | Used by |
+|-------------|------|---------|---------|
+| **Browser** | `src/lib/supabaseClient.ts` | `@supabase/supabase-js` | `SupabaseAuthRepository`, `SupabaseAuthStateObserver`, and any client-side Supabase access |
+| **Server** | `src/lib/supabase/server.ts` | `@supabase/ssr` | `get-session.ts`, `actions.ts`, and any server-side Supabase access |
+
+- **Client components / repositories**: Import `supabaseClient` from `src/lib/supabaseClient.ts` only.
+- **Server components / Server Actions**: Call `createClient()` from `src/lib/supabase/server.ts` only.
+- **E2E / scripts**: May create their own admin client via `createClient(url, serviceRoleKey)` from `@supabase/supabase-js` for test or tooling use; this is not part of the app runtime.
+
 ## Future Considerations
 
 - API routes will be added in `/src/api` when needed

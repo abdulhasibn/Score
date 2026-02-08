@@ -19,6 +19,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  calculatePasswordStrength,
+  getStrengthBarsCount,
+} from "../domain/passwordStrength";
 
 /**
  * SignUpForm
@@ -77,50 +81,8 @@ export function SignUpForm() {
     confirmPasswordValue &&
     passwordValue === confirmPasswordValue;
 
-  const calculatePasswordStrength = (
-    password: string
-  ): {
-    score: number;
-    level: "very-weak" | "weak" | "good" | "strong";
-    label: string;
-  } => {
-    if (!password) {
-      return { score: 0, level: "very-weak", label: "Very Weak" };
-    }
-
-    const hasMinLength = password.length >= 8;
-    const hasUppercase = /[A-Z]/.test(password);
-    const hasLowercase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecialChar = /[^A-Za-z0-9]/.test(password);
-
-    const score =
-      (hasMinLength ? 1 : 0) +
-      (hasUppercase ? 1 : 0) +
-      (hasLowercase ? 1 : 0) +
-      (hasNumber ? 1 : 0) +
-      (hasSpecialChar ? 1 : 0);
-
-    if (score <= 1) {
-      return { score, level: "very-weak", label: "Very Weak" };
-    } else if (score === 2) {
-      return { score, level: "weak", label: "Weak" };
-    } else if (score === 3 || score === 4) {
-      return { score, level: "good", label: "Good" };
-    } else {
-      return { score, level: "strong", label: "Strong" };
-    }
-  };
-
   const strength = calculatePasswordStrength(passwordValue);
-  const activeBars =
-    strength.level === "very-weak"
-      ? 1
-      : strength.level === "weak"
-        ? 2
-        : strength.level === "good"
-          ? 3
-          : 4;
+  const activeBars = getStrengthBarsCount(strength.level);
 
   const onSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);

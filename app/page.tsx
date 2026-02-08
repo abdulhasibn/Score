@@ -30,7 +30,7 @@ export default function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
       <h1 className="text-4xl font-bold">Score</h1>
-      <p className="mt-4 text-gray-600">Repository initialized and ready.</p>
+      <p className="mt-4 text-muted-foreground">Repository initialized and ready.</p>
 
       {/* Only render auth-dependent content after hydration to prevent hydration mismatches */}
       {mounted && (

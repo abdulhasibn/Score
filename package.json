@@ -21,7 +21,8 @@
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:status": "supabase status",
-    "supabase:reset": "supabase db reset"
+    "supabase:reset": "supabase db reset",
+    "supabase:delete-users": "dotenv -e .env.e2e -- node scripts/delete-all-auth-users.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
