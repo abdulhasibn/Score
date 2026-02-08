@@ -65,7 +65,6 @@ This project follows a **modular monolith** architecture designed for:
   policies.sql         # Row-level security policies placeholder
 
 /docs
-  PRD.md               # Product requirements document
   ARCHITECTURE.md      # Detailed architecture documentation
 ```
 
@@ -187,28 +186,6 @@ npm run supabase:stop
 
 See [E2E Testing Guide](./e2e/README.md) for details and [Supabase Local Guide](./supabase/README.md) for configuration.
 
-## Feature Scope
-
-### MVP (To Be Implemented)
-
-- Multi-tenant organization management
-- Player management (global entity across organizations)
-- Tournament creation and management (if applicable)
-- Team formation and management
-- Match scheduling and management
-- Live match scoring (event-driven architecture)
-- Real-time score updates via Supabase Realtime
-
-### Future Features
-
-- Mobile applications (iOS/Android)
-- Advanced analytics and statistics
-- Cross-tournament player performance tracking (if applicable)
-- Tournament brackets and playoff systems (if applicable)
-- Media management (photos, videos)
-- Public tournament pages
-- RESTful API for third-party integrations
-
 ## What Is NOT Built Yet
 
 This repository is a **clean foundation** only. The following are intentionally not implemented:
@@ -225,13 +202,6 @@ This repository is a **clean foundation** only. The following are intentionally 
 - ❌ Testing setup
 
 These will be implemented in subsequent phases.
-
-## Multi-Tenancy Model
-
-- **Organizations** are the primary tenant boundary
-- **Players** exist as global entities but are associated with organizations
-- All data access is scoped by organization membership
-- Row-level security (RLS) will enforce tenant isolation at the database level
 
 ## Development Guidelines
 
@@ -251,7 +221,6 @@ See `.env.example` for required environment variables. Currently includes:
 
 ## Documentation
 
-- [Product Requirements](./docs/PRD.md) - Feature scope and roadmap
 - [Architecture](./docs/ARCHITECTURE.md) - Detailed architecture decisions
 
 ## License

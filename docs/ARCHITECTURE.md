@@ -33,7 +33,7 @@ This application follows a **modular monolith** architecture, designed for:
   /domain         # Business logic and domain models
   /api            # Next.js API routes (when implemented)
   /lib            # Adapters and utilities (Supabase client, auth helpers, env)
-  /realtime       # Real-time channel subscriptions for live scoring
+  /realtime       # Real-time channel subscriptions
   /hooks          # Custom React hooks
   /types          # Shared TypeScript types and interfaces
   /utils          # Pure utility functions
@@ -43,7 +43,6 @@ This application follows a **modular monolith** architecture, designed for:
   policies.sql    # Row-level security policies
 
 /docs
-  PRD.md          # Product requirements
   ARCHITECTURE.md # This file
 ```
 
@@ -54,13 +53,6 @@ This application follows a **modular monolith** architecture, designed for:
 3. **Scalability**: Structure supports growth from MVP to production SaaS
 4. **Maintainability**: Modular, testable, and well-documented code
 5. **Performance**: Optimize for fast load times and efficient data fetching
-
-## Multi-Tenancy Model
-
-- Organizations are the primary tenant boundary
-- Players exist as global entities but are associated with organizations
-- All data access is scoped by organization membership
-- Row-level security enforces tenant isolation
 
 ## Data Flow
 
